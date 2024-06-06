@@ -7,9 +7,7 @@ class Message < ApplicationRecord
 
     def broadcast_message 
         ActionCable.server.broadcast("MessagesChannel", {
-            id:,
-            user_id:,
-            body:,
+            message: self.as_json(include: :user)
         })
     end
 end

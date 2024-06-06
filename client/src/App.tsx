@@ -1,13 +1,168 @@
-// import { useState } from "react";
-import "./App.css";
+import { useState, useEffect } from "react";
+import "bootstrap-icons/font/bootstrap-icons.css";
+
+// websocket connection
+const ws = new WebSocket("ws://localhost:3000/cable");
+
+// messages interface
+interface Messages {
+    id: number;
+    body: string;
+    user_id: number;
+    user: {
+        name: string;
+    };
+    created_at: string;
+}
 
 function App() {
-    // const [count, setCount] = useState(0);
+    const [messages, setMessages] = useState<Messages[]>([]);
+    const [guid, setGuid] = useState("");
+    const [userId] = useState<number>(5);
+    const messagesContainer = document.getElementById("messages");
+
+    // websocket events
+    ws.onopen = () => {
+        setGuid(Math.random().toString(36).substring(2, 15));
+        ws.send(
+            JSON.stringify({
+                command: "subscribe",
+                identifier: JSON.stringify({
+                    id: guid,
+                    channel: "MessagesChannel",
+                }),
+            })
+        );
+    };
+
+    ws.onmessage = (e) => {
+        const data = JSON.parse(e.data);
+        if (data.type === "ping") return;
+        if (data.type === "welcome") return;
+        if (data.type === "confirm_subscription") return;
+
+        const message = data.message.message;
+        setMessages([...messages, message]);
+        if (!messagesContainer) return;
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    };
+
+    // fetch initial messages
+    useEffect(() => {
+        const fetchMessages = async () => {
+            const response = await fetch("http://localhost:3000/messages");
+            const data = await response.json();
+            setMessages(data);
+            if (!messagesContainer) return;
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        };
+        fetchMessages();
+    }, [messagesContainer]);
+
+    // scroll to bottom on new message
+    useEffect(() => {
+        if (!messagesContainer) return;
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }, [messages, messagesContainer]);
+
+    // send message
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        const target = e.target as typeof e.target & {
+            message: { value: string };
+        };
+        const body = target.message.value;
+        target.message.value = "";
+
+        await fetch("http://localhost:3000/messages", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ body, user_id: userId }),
+        });
+    };
 
     return (
-        <>
-            <p className="text-red-600">tes tailwind</p>
-        </>
+        <div className="flex flex-col bg-gradient-to-r from-cyan-400 to-cyan-600 p-2 md:p-4 min-h-screen max-h-screen">
+            <div
+                className="flex justify-between bg-white p-4 align-middle"
+                style={{ height: "80px" }}
+            >
+                <div className="flex justify-center items-center bg-gray-300 rounded-full w-12 h-12">
+                    <i className="text-3xl text-white bi bi-people-fill"></i>
+                </div>
+                <div className="text-center">
+                    <p className="font-bold text-lg">Rails Chat App</p>
+                    <p>3 members</p>
+                </div>
+                <div className="flex items-center">
+                    <button className="bg-red-500 hover:bg-red-700 px-4 py-2 rounded font-bold text-white">
+                        Logout
+                    </button>
+                </div>
+            </div>
+            <div
+                className="flex-grow justify-between bg-contain p-2 overflow-auto l"
+                style={{ backgroundImage: "url(/bg.jpg)" }}
+                id="messages"
+            >
+                <div>
+                    {messages.length > 0 ? (
+                        messages.map((message) => {
+                            if (message.user_id == userId) {
+                                return (
+                                    <div
+                                        className="flex justify-end"
+                                        key={message.id}
+                                    >
+                                        <div className="bg-teal-200 shadow mb-2 p-2 rounded-xl max-w-56 md:max-w-xl break-words">
+                                            <p>{message.body}</p>
+                                        </div>
+                                    </div>
+                                );
+                            } else {
+                                return (
+                                    <div
+                                        className="flex justify-start"
+                                        key={message.id}
+                                    >
+                                        <div className="bg-white shadow mb-2 p-2 rounded-xl max-w-56 md:max-w-xl break-words">
+                                            <p className="font-bold">
+                                                {message.user.name}
+                                            </p>
+                                            <p>{message.body}</p>
+                                        </div>
+                                    </div>
+                                );
+                            }
+                        })
+                    ) : (
+                        <p>No messages</p>
+                    )}
+                </div>
+            </div>
+            <div
+                style={{ backgroundImage: "url(/bg.jpg)" }}
+                className="bg-contain p-2"
+            >
+                <form onSubmit={handleSubmit} className="flex items-center">
+                    <input
+                        className="flex-grow border-gray-300 mr-2 px-4 py-2 border focus:border-teal-500 rounded-lg messageInput focus:outline-none"
+                        type="text"
+                        name="message"
+                        placeholder="Type your message..."
+                        autoComplete="off"
+                    />
+                    <button
+                        className="bg-teal-500 hover:bg-teal-600 px-4 py-2 rounded-lg font-semibold text-white messageButton focus:outline-none"
+                        type="submit"
+                    >
+                        Send
+                    </button>
+                </form>
+            </div>
+        </div>
     );
 }
 
