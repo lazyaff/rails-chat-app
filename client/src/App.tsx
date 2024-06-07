@@ -88,6 +88,7 @@ function App() {
             message: { value: string };
         };
         const body = target.message.value;
+        if (body === "") return;
         target.message.value = "";
 
         await fetch("http://localhost:3000/messages", {
