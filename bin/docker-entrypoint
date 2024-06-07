@@ -1,8 +1,15 @@
 #!/bin/bash -e
 
-# If running the rails server then create or migrate existing database
-if [ "${1}" == "./bin/rails" ] && [ "${2}" == "server" ]; then
-  ./bin/rails db:prepare
+PIDFILE=/rails/tmp/pids/server.pid
+
+# Delete pidfile if it exists
+if [ -f $PIDFILE ]; then
+  rm -f $PIDFILE
+else
+  # If running the rails server then create or migrate existing database
+  if [ "${1}" == "./bin/rails" ] && [ "${2}" == "server" ]; then
+    ./bin/rails db:prepare
+  fi
 fi
 
 exec "${@}"
