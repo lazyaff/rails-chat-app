@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
 import "bootstrap-icons/font/bootstrap-icons.css";
 
+const server = "http://localhost:3000";
+
 // websocket connection
-const ws = new WebSocket("ws://rails-chat-app-production.up.railway.app/cable");
+const ws = new WebSocket(`${server}/cable`);
 
 // messages interface
 interface Messages {
@@ -56,9 +58,7 @@ function App() {
     // fetch users
     useEffect(() => {
         const fetchUsers = async () => {
-            const response = await fetch(
-                "https://rails-chat-app-production.up.railway.app/users"
-            );
+            const response = await fetch(`${server}/users`);
             const data = await response.json();
             setUsers(data);
         };
@@ -68,9 +68,7 @@ function App() {
     // fetch initial messages
     useEffect(() => {
         const fetchMessages = async () => {
-            const response = await fetch(
-                "https://rails-chat-app-production.up.railway.app/messages"
-            );
+            const response = await fetch(`${server}/messages`);
             const data = await response.json();
             setMessages(data);
             if (!messagesContainer) return;
@@ -95,16 +93,13 @@ function App() {
         if (body === "") return;
         target.message.value = "";
 
-        await fetch(
-            "https://rails-chat-app-production.up.railway.app/messages",
-            {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({ body, user_id: userId }),
-            }
-        );
+        await fetch(`${server}/messages`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ body, user_id: userId }),
+        });
     };
 
     return (
